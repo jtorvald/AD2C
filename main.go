@@ -64,6 +64,8 @@ func run() error {
 	devices := make(map[string]string, 0)
 	devices["i386"] = "32-bit Simulator"
 	devices["x86_64"] = "64-bit Simulator"
+	devices["arm64"] = "64-bit Simulator"
+	
 	if scan {
 		xcodePaths, err := filepath.Glob("/Applications/Xcode*")
 		if err != nil {
