@@ -65,7 +65,7 @@ func run() error {
 	devices["i386"] = "32-bit Simulator"
 	devices["x86_64"] = "64-bit Simulator"
 	devices["arm64"] = "64-bit Simulator"
-	
+
 	if scan {
 		xcodePaths, err := filepath.Glob("/Applications/Xcode*")
 		if err != nil {
@@ -175,7 +175,7 @@ func getDevices(databaseFile string) (map[string]string, error) {
 			return nil, err
 		}
 
-		devices[prodType] = prodDesc
+		devices[cleanupIdentifier(prodType)] = prodDesc
 	}
 
 	err = res.Err()
@@ -184,6 +184,16 @@ func getDevices(databaseFile string) (map[string]string, error) {
 	}
 
 	return devices, nil
+}
+
+func cleanupIdentifier(identifier string) string {
+	if strings.HasSuffix(identifier, "-A") {
+		return strings.TrimSuffix(identifier, "-A")
+	}
+	if strings.HasSuffix(identifier, "-B") {
+		return strings.TrimSuffix(identifier, "-B")
+	}
+	return identifier
 }
 
 func isFlagPassed(name string) (found bool) {
