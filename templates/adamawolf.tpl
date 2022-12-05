@@ -1,0 +1,2 @@
+{{range . }}{{.Identifier}} : {{.Description}}
+{{end}}
