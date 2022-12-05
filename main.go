@@ -33,6 +33,7 @@ type Device struct {
 }
 
 func run() error {
+	seenBefore = make(map[string]struct{}, 0)
 
 	templateName := flag.String("t", "", "give a template name i.e. php, go, js")
 	_ = flag.Bool("iphone", false, "pass -iphone if you want iPhone, iPad and iPod devices (default: false, but true if no other options given")
@@ -65,7 +66,6 @@ func run() error {
 
 	xcodePaths, err := filepath.Glob("/Applications/Xcode*")
 
-	xcodePaths = make([]string, 0)
 	if len(xcodePaths) == 0 && !adamawolf {
 		scan = false
 		adamawolf = true
@@ -78,6 +78,7 @@ func run() error {
 	devices := make([]Device, 0)
 
 	if adamawolf {
+
 		url := "https://gist.githubusercontent.com/adamawolf/3048717/raw/1ee7e1a93dff9416f6ff34dd36b0ffbad9b956e9/Apple_mobile_device_types.txt"
 		client := http.Client{
 			Timeout: 2 * time.Second,
@@ -98,7 +99,7 @@ func run() error {
 			foo := strings.Split(line, ":")
 			identifier, description := strings.TrimSpace(foo[0]), strings.TrimSpace(foo[1])
 
-			devices = append(devices, Device{
+			devices = appendToDevices(devices, Device{
 				Identifier:  cleanupIdentifier(identifier),
 				Description: description,
 			})
@@ -109,7 +110,7 @@ func run() error {
 			iphone = true
 		}
 
-		devices = append(devices, Device{
+		devices = appendToDevices(devices, Device{
 			Identifier:  cleanupIdentifier("i386"),
 			Description: "32-bit Simulator",
 		}, Device{
@@ -147,7 +148,7 @@ func run() error {
 						}
 
 						for k, v := range devs {
-							devices = append(devices, Device{
+							devices = appendToDevices(devices, Device{
 								Identifier:  cleanupIdentifier(k),
 								Description: v,
 							})
@@ -169,7 +170,7 @@ func run() error {
 				}
 
 				for k, v := range devs {
-					devices = append(devices, Device{
+					devices = appendToDevices(devices, Device{
 						Identifier:  cleanupIdentifier(k),
 						Description: v,
 					})
@@ -182,7 +183,7 @@ func run() error {
 				}
 
 				for k, v := range devs {
-					devices = append(devices, Device{
+					devices = appendToDevices(devices, Device{
 						Identifier:  cleanupIdentifier(k),
 						Description: v,
 					})
@@ -196,7 +197,7 @@ func run() error {
 				}
 
 				for k, v := range devs {
-					devices = append(devices, Device{
+					devices = appendToDevices(devices, Device{
 						Identifier:  cleanupIdentifier(k),
 						Description: v,
 					})
@@ -220,6 +221,18 @@ func run() error {
 	}
 
 	return nil
+}
+
+var seenBefore map[string]struct{}
+
+func appendToDevices(devices []Device, device ...Device) []Device {
+	for _, d := range device {
+		if _, ok := seenBefore[d.Identifier]; !ok {
+			devices = append(devices, d)
+			seenBefore[d.Identifier] = struct{}{}
+		}
+	}
+	return devices
 }
 
 func getDevices(databaseFile string) (map[string]string, error) {
