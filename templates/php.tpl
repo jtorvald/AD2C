@@ -9,8 +9,8 @@ static class AppleDevices
 {
     static function GetReadableDeviceModel($model): string
     {
-        switch ($model) { {{range $identifier, $description := . }}
-            case "{{$identifier}}": return "{{$description}}";{{end}}
+        switch ($model) { {{range . }}
+            case "{{.Identifier}}": return "{{.Description}}";{{end}}
         }
         return "Unknown";
     }

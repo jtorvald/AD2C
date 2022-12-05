@@ -7,23 +7,30 @@ If you like it, don't forget to star this repo. If you have feature requests in 
 please file them under issues.
 
 # Requirements #
-The tool expects you to have Xcode on your system because it reads the devices directly from
-the Xcode traits database on your system.
+If you don't have Xcode installed, the tool will automatically use the gist from @adamawolf 
+[gist.github.com/adamawolf](https://gist.github.com/adamawolf/3048717)
+
+When you have Xcode installed it will use the database from Xcode to generate the code.
 
 # How to run #
 To write to a file:
 
-`$ ad2bc -t=js > apple-devices.js`
+`$ ad2bc -t=js -iphone -tv -watch > apple-devices.js`
 
 To write to your clipboard:
 
-`$ ad2bc -t=js | pbcopy`
+`$ ad2bc -t=js -iphone -tv -watch | pbcopy`
+
+Force the use of the gist:
+
+`$ ad2bc -t=js -iphone -tv -watch -adamwolf | pbcopy`
 
 Options are:
 - `-iphone` generate code for iPhone and iPad/iPod models
 - `-watch` generate code for Watch models
 - `-tv` generate code for Apple TV models
 - `-scan` scan your /Applications/Xcode* directories for databases
+- `-adamawolf` when you don't have Xcode installed, use the gist from [gist.github.com/adamawolf](https://gist.github.com/adamawolf/3048717)
 
 # Download releases #
 The best is to [download the binary for your platform and run the executable](https://github.com/jtorvald/ad2c/releases).

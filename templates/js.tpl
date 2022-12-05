@@ -5,8 +5,8 @@ https://github.com/jtorvald/AD2C
 */
 
 function getReadableDeviceModel(model) {
-    switch(model){ {{range $identifier, $description := . }}
-        case "{{$identifier}}": return "{{$description}}"{{end}}
+    switch(model){ {{range . }}
+        case "{{.Identifier}}": return "{{.Description}}"{{end}}
     }
     return "Unknown"
 }

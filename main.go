@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	_ "modernc.org/sqlite"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 func main() {
@@ -24,6 +27,11 @@ func main() {
 	}
 }
 
+type Device struct {
+	Identifier  string
+	Description string
+}
+
 func run() error {
 
 	templateName := flag.String("t", "", "give a template name i.e. php, go, js")
@@ -31,6 +39,7 @@ func run() error {
 	_ = flag.Bool("watch", false, "pass -watch if you wan the Apple Watch models to be identified (default: false)")
 	_ = flag.Bool("tv", false, "pass -tv (default: false")
 	_ = flag.Bool("scan", false, "pass -scan to scan the Applications directory for traits databases")
+	_ = flag.Bool("adamawolf", false, "pass -adamawolf to download the latest gist from https://gist.github.com/adamawolf/3048717")
 
 	flag.Parse()
 
@@ -38,6 +47,7 @@ func run() error {
 	watch := isFlagPassed("watch")
 	tv := isFlagPassed("tv")
 	scan := isFlagPassed("scan")
+	adamawolf := isFlagPassed("adamawolf")
 
 	filename, err := os.Executable()
 	if err != nil {
@@ -53,89 +63,147 @@ func run() error {
 		}
 	}
 
+	xcodePaths, err := filepath.Glob("/Applications/Xcode*")
+
+	xcodePaths = make([]string, 0)
+	if len(xcodePaths) == 0 && !adamawolf {
+		scan = false
+		adamawolf = true
+	}
+
 	if *templateName == "" {
 		return errors.New("specify a template name. For example: -t=php")
 	}
 
-	if !iphone && !watch && !tv {
-		iphone = true
-	}
+	devices := make([]Device, 0)
 
-	devices := make(map[string]string, 0)
-	devices["i386"] = "32-bit Simulator"
-	devices["x86_64"] = "64-bit Simulator"
-	devices["arm64"] = "64-bit Simulator"
-
-	if scan {
-		xcodePaths, err := filepath.Glob("/Applications/Xcode*")
+	if adamawolf {
+		url := "https://gist.githubusercontent.com/adamawolf/3048717/raw/1ee7e1a93dff9416f6ff34dd36b0ffbad9b956e9/Apple_mobile_device_types.txt"
+		client := http.Client{
+			Timeout: 2 * time.Second,
+		}
+		resp, err := client.Get(url)
 		if err != nil {
 			return err
 		}
-		for _, path := range xcodePaths {
+		defer resp.Body.Close()
+		txtScanner := bufio.NewScanner(resp.Body)
+		txtScanner.Split(bufio.ScanLines)
 
-			err = filepath.WalkDir(filepath.Join(path, "/Contents/Developer/Platforms/"), func(path string, d fs.DirEntry, err error) error {
-				if strings.Index(path, ".platform") > 0 &&
-					strings.HasSuffix(path, "traits.db") {
-
-					if strings.Index(path, "AppleTVOS.platform") > 0 && !tv {
-						return nil
-					}
-					if strings.Index(path, "WatchOS.platform") > 0 && !watch {
-						return nil
-					}
-					if strings.Index(path, "iPhoneOS.platform") > 0 && !iphone {
-						return nil
-					}
-
-					devs, err := getDevices(path)
-					if err != nil {
-						return err
-					}
-
-					for k, v := range devs {
-						devices[k] = v
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				return err
+		for txtScanner.Scan() {
+			line := txtScanner.Text()
+			if strings.Index(line, ":") <= -1 {
+				continue
 			}
-		}
+			foo := strings.Split(line, ":")
+			identifier, description := strings.TrimSpace(foo[0]), strings.TrimSpace(foo[1])
 
+			devices = append(devices, Device{
+				Identifier:  cleanupIdentifier(identifier),
+				Description: description,
+			})
+		}
 	} else {
 
-		if iphone {
-			devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/usr/standalone/device_traits.db")
+		if !iphone && !watch && !tv {
+			iphone = true
+		}
+
+		devices = append(devices, Device{
+			Identifier:  cleanupIdentifier("i386"),
+			Description: "32-bit Simulator",
+		}, Device{
+			Identifier:  cleanupIdentifier("x86_64"),
+			Description: "64-bit Simulator",
+		}, Device{
+			Identifier:  cleanupIdentifier("arm64"),
+			Description: "64-bit Simulator",
+		})
+
+		if scan {
+
 			if err != nil {
 				return err
 			}
+			for _, path := range xcodePaths {
 
-			for k, v := range devs {
-				devices[k] = v
+				err = filepath.WalkDir(filepath.Join(path, "/Contents/Developer/Platforms/"), func(path string, d fs.DirEntry, err error) error {
+					if strings.Index(path, ".platform") > 0 &&
+						strings.HasSuffix(path, "traits.db") {
+
+						if strings.Index(path, "AppleTVOS.platform") > 0 && !tv {
+							return nil
+						}
+						if strings.Index(path, "WatchOS.platform") > 0 && !watch {
+							return nil
+						}
+						if strings.Index(path, "iPhoneOS.platform") > 0 && !iphone {
+							return nil
+						}
+
+						devs, err := getDevices(path)
+						if err != nil {
+							return err
+						}
+
+						for k, v := range devs {
+							devices = append(devices, Device{
+								Identifier:  cleanupIdentifier(k),
+								Description: v,
+							})
+						}
+					}
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+		} else {
+
+			if iphone {
+				devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/usr/standalone/device_traits.db")
+				if err != nil {
+					return err
+				}
+
+				for k, v := range devs {
+					devices = append(devices, Device{
+						Identifier:  cleanupIdentifier(k),
+						Description: v,
+					})
+				}
+			}
+			if watch {
+				devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/WatchOS.platform/usr/standalone/device_traits.db")
+				if err != nil {
+					return err
+				}
+
+				for k, v := range devs {
+					devices = append(devices, Device{
+						Identifier:  cleanupIdentifier(k),
+						Description: v,
+					})
+				}
+			}
+
+			if tv {
+				devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/AppleTVOS.platform/usr/standalone/device_traits.db")
+				if err != nil {
+					return err
+				}
+
+				for k, v := range devs {
+					devices = append(devices, Device{
+						Identifier:  cleanupIdentifier(k),
+						Description: v,
+					})
+				}
 			}
 		}
-		if watch {
-			devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/WatchOS.platform/usr/standalone/device_traits.db")
-			if err != nil {
-				return err
-			}
 
-			for k, v := range devs {
-				devices[k] = v
-			}
-		}
-
-		if tv {
-			devs, err := getDevices("/Applications/Xcode.app/Contents/Developer/Platforms/AppleTVOS.platform/usr/standalone/device_traits.db")
-			if err != nil {
-				return err
-			}
-
-			for k, v := range devs {
-				devices[k] = v
-			}
-		}
 	}
 
 	if len(devices) == 0 {
