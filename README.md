@@ -23,7 +23,7 @@ To write to your clipboard:
 
 Force the use of the gist:
 
-`$ ad2bc -t=js -iphone -tv -watch -adamwolf | pbcopy`
+`$ ad2bc -t=js -iphone -tv -watch -adamawolf | pbcopy`
 
 Options are:
 - `-iphone` generate code for iPhone and iPad/iPod models

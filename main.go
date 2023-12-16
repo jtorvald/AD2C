@@ -79,7 +79,7 @@ func run() error {
 
 	if adamawolf {
 
-		url := "https://gist.githubusercontent.com/adamawolf/3048717/raw/1ee7e1a93dff9416f6ff34dd36b0ffbad9b956e9/Apple_mobile_device_types.txt"
+		url := "https://gist.githubusercontent.com/adamawolf/3048717/raw/1ee7e1a93dff9416f6ff34dd36b0ffbad9b956e9/"
 		client := http.Client{
 			Timeout: 2 * time.Second,
 		}
@@ -96,6 +96,7 @@ func run() error {
 			if strings.Index(line, ":") <= -1 {
 				continue
 			}
+
 			foo := strings.Split(line, ":")
 			identifier, description := strings.TrimSpace(foo[0]), strings.TrimSpace(foo[1])
 
