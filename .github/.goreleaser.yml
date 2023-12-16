@@ -27,12 +27,13 @@ builds:
 
 archives:
   - # Replacements for GOOS and GOARCH in the archive name.
-    replacements:
-      darwin: macOS
-      linux: Linux
-      windows: Windows
-      amd64: x86_64
-
+    name_template: >-
+      {{- .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end -}}
     # Additional files/template/globs you want to add to the archive.
     files:
       - LICENSE
